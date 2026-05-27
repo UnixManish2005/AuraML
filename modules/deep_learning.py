@@ -1055,11 +1055,36 @@ def _side_by_side_heatmaps(img1, img2, title1, title2):
                             subplot_titles=[title1, title2])
     fig.add_trace(go.Heatmap(z=img1, colorscale='Gray', showscale=False), row=1, col=1)
     fig.add_trace(go.Heatmap(z=img2, colorscale='RdBu', showscale=False), row=1, col=2)
-    fig.update_layout(**PLOTLY_LAYOUT, height=300,
-                       xaxis=dict(showticklabels=False),
-                       yaxis=dict(showticklabels=False),
-                       xaxis2=dict(showticklabels=False),
-                       yaxis2=dict(showticklabels=False))
+    custom_layout = {**PLOTLY_LAYOUT}
+
+    custom_layout["xaxis"] = dict(
+        showticklabels=False,
+        showgrid=False,
+        zeroline=False
+    )
+
+    custom_layout["yaxis"] = dict(
+        showticklabels=False,
+        showgrid=False,
+        zeroline=False
+    )
+
+    custom_layout["xaxis2"] = dict(
+        showticklabels=False,
+        showgrid=False,
+        zeroline=False
+    )
+
+    custom_layout["yaxis2"] = dict(
+        showticklabels=False,
+        showgrid=False,
+        zeroline=False
+    )
+
+    fig.update_layout(
+        **custom_layout,
+        height=300
+    )
     return fig
 
 
@@ -1078,10 +1103,27 @@ def _draw_cnn_arch():
         if i < len(layer_names) - 1:
             fig.add_annotation(x=i + 0.5, y=0.5, text="→",
                                 showarrow=False, font=dict(size=18, color='#8892A4'))
-    fig.update_layout(**PLOTLY_LAYOUT, title="CNN Architecture",
-                       height=180, barmode='group',
-                       xaxis=dict(showticklabels=False, showgrid=False),
-                       yaxis=dict(showticklabels=False, showgrid=False, range=[0, 1.4]))
+    custom_layout = {**PLOTLY_LAYOUT}
+
+    custom_layout["xaxis"] = dict(
+        showticklabels=False,
+        showgrid=False,
+        zeroline=False
+    )
+
+    custom_layout["yaxis"] = dict(
+        showticklabels=False,
+        showgrid=False,
+        zeroline=False,
+        range=[0, 1.4]
+    )
+
+    fig.update_layout(
+        **custom_layout,
+        title="CNN Architecture",
+        height=180,
+        barmode='group'
+    )
     return fig
 
 

@@ -121,14 +121,14 @@ def _seed_data(c, conn):
                   ("Admin", "manishankardey2005@gmail.com", pw, "admin"))
 
     # Demo student
-    c.execute("SELECT id FROM users WHERE email='demo@ailearn.com'")
-    if not c.fetchone():
-        pw = hashlib.sha256("demo123".encode()).hexdigest()
-        c.execute("INSERT INTO users(name,email,password,role) VALUES(?,?,?,?)",
-                  ("Demo Student", "demo@ailearn.com", pw, "student"))
+    #c.execute("SELECT id FROM users WHERE email='demo@ailearn.com'")
+    #if not c.fetchone():
+     #   pw = hashlib.sha256("demo123".encode()).hexdigest()
+      #  c.execute("INSERT INTO users(name,email,password,role) VALUES(?,?,?,?)",
+       #           ("Demo Student", "demo@ailearn.com", pw, "student"))
 
     # Sample quiz questions
-    c.execute("SELECT COUNT(*) FROM quiz_questions")
+    """c.execute("SELECT COUNT(*) FROM quiz_questions")
     if c.fetchone()[0] == 0:
         questions = [
             # ML Basics
@@ -154,7 +154,7 @@ def _seed_data(c, conn):
         c.executemany(
             "INSERT INTO quiz_questions(topic,question,option_a,option_b,option_c,option_d,answer,difficulty,qtype) VALUES(?,?,?,?,?,?,?,?,?)",
             questions)
-    conn.commit()
+    conn.commit()"""
 
 
 # ── Auth helpers ────────────────────────────────────────────────────────────
