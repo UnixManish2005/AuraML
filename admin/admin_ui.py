@@ -1,0 +1,212 @@
+"""Admin Panel — Dashboard, Student Mgmt, Quiz Mgmt, Announcements."""
+
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+from database.db import (platform_stats, get_all_students, toggle_student,
+                          get_leaderboard, add_question, add_announcement,
+                          get_announcements, get_connection)
+from utils.styles import section_header, kpi_card, alert
+
+
+def show_admin(user):
+    section_header("⚙️ Admin Control Panel", "Manage the entire AILearn Pro platform.")
+
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(
+        ["📊 Dashboard", "👥 Students", "📝 Quiz Manager", "📢 Announcements", "📈 Analytics"])
+
+    # ── Tab 1: Dashboard ───────────────────────────────────────────────────
+    with tab1:
+        stats = platform_stats()
+        c1, c2, c3, c4 = st.columns(4)
+        with c1: kpi_card("Total Students", stats["students"],   "👥")
+        with c2: kpi_card("Quiz Attempts",  stats["attempts"],   "📝")
+        with c3: kpi_card("Certificates",   stats["certs"],      "🎓")
+        with c4: kpi_card("Questions",       stats["questions"],  "❓")
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # Leaderboard preview
+        c_left, c_right = st.columns(2)
+        with c_left:
+            st.markdown("#### 🏆 Top Performers")
+            board = get_leaderboard()
+            if board:
+                df = pd.DataFrame(board)
+                df.columns = ["Name", "Avg Score (%)", "Attempts"]
+                df["Avg Score (%)"] = df["Avg Score (%)"].round(1)
+                st.dataframe(df.head(10), use_container_width=True, hide_index=True)
+            else:
+                alert("No quiz data yet.", "info")
+
+        with c_right:
+            st.markdown("#### 📊 Platform Activity")
+            # Simulate activity data for demo
+            import datetime
+            days  = [(datetime.date.today() - datetime.timedelta(days=i)).strftime("%d %b")
+                     for i in range(6, -1, -1)]
+            activity = [12, 18, 9, 22, 15, 28, 20]
+            fig = go.Figure()
+            fig.add_trace(go.Bar(x=days, y=activity,
+                                  marker_color=["#6C63FF","#8B5CF6","#FF6584","#6C63FF",
+                                                "#43D9AD","#FFB547","#6C63FF"]))
+            fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                               font=dict(color="#E8E8F0"), height=280,
+                               margin=dict(l=0,r=0,t=10,b=10),
+                               xaxis=dict(showgrid=False,color="#8888AA"),
+                               yaxis=dict(showgrid=False,color="#8888AA"))
+            st.plotly_chart(fig, use_container_width=True)
+
+    # ── Tab 2: Students ────────────────────────────────────────────────────
+    with tab2:
+        st.markdown("#### 👥 All Students")
+        students = get_all_students()
+        if not students:
+            alert("No students registered yet.", "info")
+        else:
+            search = st.text_input("🔍 Search by name or email", key="admin_search")
+            df = pd.DataFrame(students)
+            if search:
+                df = df[df["name"].str.contains(search, case=False) |
+                        df["email"].str.contains(search, case=False)]
+            df["Status"] = df["is_active"].map({1:"🟢 Active", 0:"🔴 Blocked"})
+            st.dataframe(df[["id","name","email","Status","created_at"]],
+                         use_container_width=True, hide_index=True)
+
+            st.markdown("#### 🔧 Block / Unblock Student")
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                sid = st.number_input("Student ID", min_value=1, step=1, key="block_id")
+            with c2:
+                action = st.selectbox("Action", ["Unblock (Activate)", "Block (Deactivate)"])
+            with c3:
+                st.markdown("<br>", unsafe_allow_html=True)
+                if st.button("Apply", use_container_width=True):
+                    toggle_student(sid, action.startswith("Unblock"))
+                    st.success(f"✅ Student {sid} {action.split()[0].lower()}ed.")
+                    st.rerun()
+
+    # ── Tab 3: Quiz Manager ────────────────────────────────────────────────
+    with tab3:
+        st.markdown("#### ➕ Add New Question")
+        c1, c2 = st.columns(2)
+        with c1:
+            q_topic = st.selectbox("Topic", ["Statistics","Machine Learning","Deep Learning","NLP","Python","Computer Vision"])
+            q_diff  = st.selectbox("Difficulty", ["easy","medium","hard"])
+            q_type  = st.selectbox("Type", ["mcq","true_false"])
+        with c2:
+            q_text = st.text_area("Question text", key="q_text", height=100)
+            q_ans  = st.selectbox("Correct answer", ["A","B","C","D"])
+
+        q_a = st.text_input("Option A", key="qa")
+        q_b = st.text_input("Option B", key="qb")
+        q_c = st.text_input("Option C", key="qc")
+        q_d = st.text_input("Option D", key="qd")
+
+        if st.button("✅ Add Question", use_container_width=True):
+            if q_text and q_a and q_b:
+                add_question(q_topic, q_text, q_a, q_b, q_c, q_d,
+                             q_ans, q_diff, q_type, user["id"])
+                st.success("✅ Question added!")
+            else:
+                st.warning("Fill in question text and at least options A & B.")
+
+        st.markdown("---")
+        st.markdown("#### 📋 Existing Questions")
+        conn = get_connection()
+        df_q = pd.read_sql("SELECT id,topic,question,answer,difficulty FROM quiz_questions ORDER BY id DESC LIMIT 50",
+                            conn)
+        conn.close()
+        st.dataframe(df_q, use_container_width=True, hide_index=True)
+
+        st.markdown("#### 📊 Quiz Attempt Stats")
+        conn = get_connection()
+        df_a = pd.read_sql("""
+            SELECT topic, COUNT(*) as attempts, ROUND(AVG(score*100.0/total),1) as avg_pct
+            FROM quiz_attempts GROUP BY topic ORDER BY attempts DESC
+        """, conn)
+        conn.close()
+        if not df_a.empty:
+            fig = px.bar(df_a, x="topic", y="avg_pct", color="attempts",
+                         color_continuous_scale=["#1A1A2E","#6C63FF"],
+                         labels={"avg_pct":"Avg Score (%)","topic":"Topic"})
+            fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                               font=dict(color="#E8E8F0"), height=300,
+                               margin=dict(l=0,r=0,t=10,b=10),
+                               coloraxis_showscale=False,
+                               xaxis=dict(showgrid=False,color="#E8E8F0"),
+                               yaxis=dict(showgrid=False,color="#8888AA"))
+            st.plotly_chart(fig, use_container_width=True)
+
+    # ── Tab 4: Announcements ───────────────────────────────────────────────
+    with tab4:
+        st.markdown("#### 📢 Post Announcement")
+        ann_title = st.text_input("Title", key="ann_title")
+        ann_body  = st.text_area("Message", key="ann_body", height=120)
+        if st.button("📢 Post Announcement", use_container_width=True):
+            if ann_title and ann_body:
+                add_announcement(ann_title, ann_body, user["id"])
+                st.success("✅ Announcement posted!")
+            else:
+                st.warning("Fill in title and message.")
+
+        st.markdown("---")
+        st.markdown("#### 📋 Recent Announcements")
+        anns = get_announcements()
+        if anns:
+            for ann in anns:
+                st.markdown(f"""
+                <div style="background:#1A1A2E;border-radius:10px;padding:0.8rem 1rem;
+                            border:1px solid rgba(108,99,255,0.2);margin-bottom:0.5rem">
+                    <strong style="color:#E8E8F0">{ann['title']}</strong>
+                    <span style="float:right;color:#8888AA;font-size:0.8rem">{ann['created_at'][:16]}</span>
+                    <p style="color:#AAAACC;font-size:0.85rem;margin:0.3rem 0 0">{ann['body']}</p>
+                </div>
+                """, unsafe_allow_html=True)
+        else:
+            alert("No announcements yet.", "info")
+
+    # ── Tab 5: Analytics ───────────────────────────────────────────────────
+    with tab5:
+        st.markdown("#### 📈 Platform Analytics")
+
+        conn = get_connection()
+        df_prog = pd.read_sql("""
+            SELECT module, COUNT(*) as learners, AVG(progress_pct) as avg_pct
+            FROM learning_progress GROUP BY module ORDER BY learners DESC
+        """, conn)
+        df_certs = pd.read_sql("""
+            SELECT course, COUNT(*) as count FROM certificates GROUP BY course
+        """, conn)
+        conn.close()
+
+        c1, c2 = st.columns(2)
+        with c1:
+            if not df_prog.empty:
+                st.markdown("**Most Popular Modules**")
+                fig = px.bar(df_prog, x="module", y="learners",
+                             color_discrete_sequence=["#6C63FF"])
+                fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                                   font=dict(color="#E8E8F0"), height=280,
+                                   margin=dict(l=0,r=0,t=10,b=10),
+                                   xaxis=dict(showgrid=False,color="#E8E8F0",tickangle=30),
+                                   yaxis=dict(showgrid=False,color="#8888AA"))
+                st.plotly_chart(fig, use_container_width=True)
+
+        with c2:
+            if not df_certs.empty:
+                st.markdown("**Certificates Issued by Course**")
+                fig2 = px.pie(df_certs, names="course", values="count",
+                              color_discrete_sequence=px.colors.qualitative.Vivid,
+                              hole=0.45)
+                fig2.update_layout(paper_bgcolor="rgba(0,0,0,0)",
+                                    font=dict(color="#E8E8F0"), height=280,
+                                    legend=dict(bgcolor="rgba(0,0,0,0)",font=dict(size=10)),
+                                    margin=dict(l=0,r=0,t=10,b=10))
+                st.plotly_chart(fig2, use_container_width=True)
+
+        if df_prog.empty and df_certs.empty:
+            alert("Analytics will appear as students use the platform.", "info")
