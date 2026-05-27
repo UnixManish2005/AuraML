@@ -133,20 +133,32 @@ def render():
         # -------------------------------
         # PREDICTION
         # -------------------------------
+# Store prediction in session state
+        if "pred" not in st.session_state:
+            st.session_state.pred = 0
+
+        if "prob" not in st.session_state:
+            st.session_state.prob = 0.0
+
         if predict_btn:
 
-            pred = model.predict([
-                [inp_income, inp_credit, inp_debt]
-            ])[0]
+            input_data = [[
+                float(inp_income),
+                float(inp_credit),
+                float(inp_debt)
+            ]]
 
-            prob = model.predict_proba([
-                [inp_income, inp_credit, inp_debt]
-            ])[0][1]
+            pred = model.predict(input_data)[0]
 
-        else:
+            proba = model.predict_proba(input_data)[0]
 
-            pred = 0
-            prob = 0.0
+            prob = float(proba[1])
+
+            st.session_state.pred = pred
+            st.session_state.prob = prob
+
+        pred = st.session_state.pred
+        prob = st.session_state.prob
 
         result_color = "#43E97B" if pred == 1 else "#FF6584"
 
@@ -178,40 +190,44 @@ def render():
                 "Leaf Nodes",
                 str(model.get_n_leaves())
             )
+            
 
         # -------------------------------
         # RESULT CARD
-        st.markdown(f"""
-        <div class="ml-card"
-            style="
-            text-align:center;
-            border-color:{result_color};
-            padding:28px;
-            ">
+        # -------------------------------
+# RESULT CARD
+# -------------------------------
 
-            <div style="
-                font-size:2rem;
-                font-weight:700;
-                color:{result_color};
-            ">
-                {result_label}
-            </div>
+        card_html = f"""
+        <div style='text-align:center;
+        border:2px solid {result_color};
+        border-radius:18px;
+        padding:28px;
+        background:#111827;
+        margin-top:15px;'>
 
-            <div style="
-                color:#8892A4;
-                margin-top:8px;
-            ">
-                Approval Probability:
+        <div style='font-size:2rem;
+        font-weight:700;
+        color:{result_color};'>
+        {result_label}
+        </div>
 
-                <b style="color:{result_color};">
-                    {prob*100:.1f}%
-                </b>
-            </div>
+        <div style='color:#8892A4;
+        margin-top:10px;
+        font-size:1rem;'>
+
+        Approval Probability:
+        <span style='color:{result_color};
+        font-weight:bold;'>
+
+        {prob*100:.1f}%
+
+        </span>
+        </div>
 
         </div>
-        """, unsafe_allow_html=True)
-
-        st.progress(float(prob))
+        """
+        st.markdown(card_html, unsafe_allow_html=True)
 
         # -------------------------------
         # TEXT TREE
@@ -369,20 +385,26 @@ def _draw_tree(model, feature_names, max_depth):
         left = tree_.children_left[node]
         right = tree_.children_right[node]
 
+        ny = y - 1
+
+        # LEFT CHILD
         if left != _tree.TREE_LEAF:
 
             nx_l = x - dx
-            nx_r = x + dx
-
-            ny = y - 1
 
             edge_x.extend([x, nx_l, None])
             edge_y.extend([y, ny, None])
 
+            recurse(left, nx_l, ny, dx / 2, depth + 1)
+
+        # RIGHT CHILD
+        if right != _tree.TREE_LEAF:
+
+            nx_r = x + dx
+
             edge_x.extend([x, nx_r, None])
             edge_y.extend([y, ny, None])
 
-            recurse(left, nx_l, ny, dx / 2, depth + 1)
             recurse(right, nx_r, ny, dx / 2, depth + 1)
 
     recurse(0, 0, 0, 4, 0)

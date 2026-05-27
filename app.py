@@ -29,7 +29,7 @@ def show_auth():
         <span style="font-family:Syne,sans-serif;font-size:3rem;font-weight:800;
                      background:linear-gradient(135deg,#6C63FF,#FF6584);
                      -webkit-background-clip:text;-webkit-text-fill-color:transparent">
-            🐬 AuraML
+            🐬 AuraML 🐬
         </span>
         <p style="color:#8888AA;font-size:1rem;margin:.3rem 0 1.5rem">
             The All-in-One AI/ML Learning Platform
@@ -107,7 +107,7 @@ def show_sidebar(user):
         st.markdown(f"""
         <div style="background:#1A1A2E;border-radius:12px;padding:.7rem 1rem;
                     border:1px solid rgba(108,99,255,0.2);margin-bottom:1rem;text-align:center">
-            <div style="font-size:1.6rem">👤</div>
+            <div style="font-size:1.6rem">🙈</div>
             <div style="font-weight:700;color:#E8E8F0;font-size:.9rem">{user['name']}</div>
             <div style="color:#8888AA;font-size:.75rem">{user['email']}</div>
             <span style="background:rgba(108,99,255,.2);color:#6C63FF;

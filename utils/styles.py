@@ -122,7 +122,7 @@ def inject_css():
 def welcome_message(name: str, custom_text: str = "Ready to continue your AI/ML acceleration journey? Pick a training track below.") -> str:
     return f"""
     <div class="welcome-card">
-        <div class="welcome-title">Hey , <span class="welcome-name">{name}</span> ! 🙈</div>
+        <div class="welcome-title">Hey , <span class="welcome-name">{name}</span> 🌼</div>
         <p class="welcome-text">{custom_text}</p>
     </div>"""
 
