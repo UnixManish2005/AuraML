@@ -98,7 +98,7 @@ def show_sidebar(user):
             <span style="font-family:Syne,sans-serif;font-size:1.5rem;font-weight:800;
                          background:linear-gradient(135deg,#6C63FF,#FF6584);
                          -webkit-background-clip:text;-webkit-text-fill-color:transparent">
-                🧠 AuraML
+                🐬 AuraML 🐬
             </span>
         </div>""", unsafe_allow_html=True)
 

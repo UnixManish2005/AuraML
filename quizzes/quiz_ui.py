@@ -95,7 +95,7 @@ def _quiz_lobby(uid):
         <div style="background:#1A1A2E;border-radius:12px;padding:1rem;
                     border:1px solid rgba(108,99,255,0.2);margin-top:0.5rem">
             <p style="color:#8888AA;margin:0;font-size:0.88rem">
-            ⏱ 30 seconds per question &nbsp;|&nbsp; 10 questions &nbsp;|&nbsp; Auto-evaluated
+              🙀 Don't fear, just go for it....... &nbsp;&nbsp; Kyuki, Dar ke Agey Jeet Hai 🕺🏻 &nbsp;
             </p>
         </div>
         """, unsafe_allow_html=True)
