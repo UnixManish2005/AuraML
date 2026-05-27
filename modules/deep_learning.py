@@ -444,10 +444,22 @@ def _activation_lab():
 
         fig.add_hline(y=0, line_color="rgba(136,146,164,0.3)", line_width=1)
         fig.add_vline(x=0, line_color="rgba(136,146,164,0.3)", line_width=1)
-        fig.update_layout(**PLOTLY_LAYOUT,
-                           title="Activation Function Comparison",
-                           xaxis_title="x (pre-activation)", yaxis_title="f(x)",
-                           yaxis=dict(range=[-2, 3]), height=400)
+        custom_layout = {**PLOTLY_LAYOUT}
+
+        custom_layout["yaxis"] = dict(
+            title="f(x)",
+            range=[-2, 3]
+        )
+
+        custom_layout["xaxis"] = dict(
+            title="x (pre-activation)"
+        )
+
+        fig.update_layout(
+            **custom_layout,
+            title="Activation Function Comparison",
+            height=400
+        )
         st.plotly_chart(fig, use_container_width=True)
 
     # Detail cards
@@ -513,9 +525,22 @@ def _loss_lab():
             ]:
                 fig.add_trace(go.Scatter(x=r_range, y=fn(r_range), mode='lines',
                                           line=dict(color=color, width=2.5), name=name))
-            fig.update_layout(**PLOTLY_LAYOUT, title="Loss vs Residual",
-                               xaxis_title="Residual (y - ŷ)", yaxis_title="Loss",
-                               yaxis=dict(range=[0, 12]), height=320)
+                custom_layout = {**PLOTLY_LAYOUT}
+
+                custom_layout["xaxis"] = dict(
+                    title="Residual (y - ŷ)"
+                )
+
+                custom_layout["yaxis"] = dict(
+                    title="Loss",
+                    range=[0, 12]
+                )
+
+                fig.update_layout(
+                    **custom_layout,
+                    title="Loss vs Residual",
+                    height=320
+                )
             st.plotly_chart(fig, use_container_width=True)
 
         m1, m2, m3, m4 = st.columns(4)
@@ -542,10 +567,22 @@ def _loss_lab():
         fig.add_trace(go.Scatter(x=y_prob, y=bce_0, mode='lines',
                                   line=dict(color=COLOR_SEQ[2], width=2.5),
                                   name='BCE when y=0 (penalise high probability)'))
-        fig.update_layout(**PLOTLY_LAYOUT,
-                           title="Binary Cross-Entropy Loss",
-                           xaxis_title="Predicted Probability", yaxis_title="Loss",
-                           yaxis=dict(range=[0, 5]), height=320)
+        custom_layout = {**PLOTLY_LAYOUT}
+
+        custom_layout["xaxis"] = dict(
+            title="Predicted Probability"
+        )
+
+        custom_layout["yaxis"] = dict(
+            title="Loss",
+            range=[0, 5]
+        )
+
+        fig.update_layout(
+            **custom_layout,
+            title="Binary Cross-Entropy Loss",
+            height=320
+        )
         st.plotly_chart(fig, use_container_width=True)
 
         st.markdown(concept_box(
@@ -770,11 +807,23 @@ def _transfer_lab():
                                   name='From Scratch', line=dict(color=COLOR_SEQ[2], width=2.5)))
         fig.add_trace(go.Scatter(x=dataset_sizes, y=transfer_acc, mode='lines+markers',
                                   name='Transfer Learning', line=dict(color=COLOR_SEQ[1], width=2.5)))
-        fig.update_layout(**PLOTLY_LAYOUT,
-                           title="Dataset Size vs Accuracy: Transfer vs From Scratch",
-                           xaxis_title="Training Dataset Size", yaxis_title="Accuracy",
-                           yaxis=dict(range=[0.3, 1.0]),
-                           xaxis_type='log', height=360)
+        custom_layout = {**PLOTLY_LAYOUT}
+
+        custom_layout["yaxis"] = dict(
+            title="Accuracy",
+            range=[0.3, 1.0]
+        )
+
+        custom_layout["xaxis"] = dict(
+            title="Training Dataset Size",
+            type='log'
+        )
+
+        fig.update_layout(
+            **custom_layout,
+            title="Dataset Size vs Accuracy: Transfer vs From Scratch",
+            height=360
+        )
         st.plotly_chart(fig, use_container_width=True)
 
         st.markdown(success_box(
@@ -983,10 +1032,22 @@ def _training_dynamics_lab():
             fig.add_trace(go.Scatter(x=[str(b) for b in batch_sizes], y=vals,
                                       mode='lines+markers', name=name,
                                       line=dict(color=color, width=2)))
-        fig.update_layout(**PLOTLY_LAYOUT,
-                           title="Batch Size Trade-offs (Relative Scale)",
-                           xaxis_title="Batch Size", yaxis_title="Relative Value",
-                           yaxis=dict(range=[0, 1.1]), height=340)
+        custom_layout = {**PLOTLY_LAYOUT}
+
+        custom_layout["xaxis"] = dict(
+            title="Batch Size"
+        )
+
+        custom_layout["yaxis"] = dict(
+            title="Relative Value",
+            range=[0, 1.1]
+        )
+
+        fig.update_layout(
+            **custom_layout,
+            title="Batch Size Trade-offs (Relative Scale)",
+            height=340
+        )
         st.plotly_chart(fig, use_container_width=True)
 
         st.markdown(warning_box(
@@ -1011,9 +1072,22 @@ def _training_dynamics_lab():
         fig.add_trace(go.Scatter(x=weights, y=loss_base + lam * np.abs(weights),
                                   name=f'L1 (Lasso) λ={lam}',
                                   line=dict(color=COLOR_SEQ[2], width=2, dash='dot')))
-        fig.update_layout(**PLOTLY_LAYOUT, title="Effect of Regularisation on Loss",
-                           xaxis_title="Weight Value", yaxis_title="Loss",
-                           yaxis=dict(range=[0, 10]), height=300)
+        custom_layout = {**PLOTLY_LAYOUT}
+
+        custom_layout["xaxis"] = dict(
+            title="Weight Value"
+        )
+
+        custom_layout["yaxis"] = dict(
+            title="Loss",
+            range=[0, 10]
+        )
+
+        fig.update_layout(
+            **custom_layout,
+            title="Effect of Regularisation on Loss",
+            height=300
+        )
         st.plotly_chart(fig, use_container_width=True)
 
         reg_types = [
@@ -1138,42 +1212,104 @@ def _draw_rnn_diagram():
 
     # Edges: input → hidden
     for x in xs:
-        fig.add_shape(type='line', x0=x, y0=0, x1=x, y1=1,
-                       line=dict(color='rgba(108,99,255,0.5)', width=1.5))
-        fig.add_shape(type='line', x0=x, y0=1, x1=x, y1=2,
-                       line=dict(color='rgba(67,233,123,0.5)', width=1.5))
+        fig.add_shape(
+            type='line',
+            x0=x, y0=0,
+            x1=x, y1=1,
+            line=dict(color='rgba(108,99,255,0.5)', width=1.5)
+        )
+
+        fig.add_shape(
+            type='line',
+            x0=x, y0=1,
+            x1=x, y1=2,
+            line=dict(color='rgba(67,233,123,0.5)', width=1.5)
+        )
+
     # Recurrent edges
     for x in range(steps - 1):
-        fig.add_shape(type='line', x0=x, y0=1, x1=x+1, y1=1,
-                       line=dict(color='rgba(255,101,132,0.7)', width=2, dash='dot'))
+        fig.add_shape(
+            type='line',
+            x0=x, y0=1,
+            x1=x+1, y1=1,
+            line=dict(color='rgba(255,101,132,0.7)', width=2, dash='dot')
+        )
 
     # Nodes
     for x, (lbl, hid, out) in enumerate(zip(labels, hiddens, outputs)):
-        fig.add_trace(go.Scatter(x=[x], y=[0], mode='markers+text',
-                                  marker=dict(size=28, color=COLOR_SEQ[3]),
-                                  text=[lbl], textposition='middle center',
-                                  showlegend=False, textfont=dict(size=10)))
-        fig.add_trace(go.Scatter(x=[x], y=[1], mode='markers+text',
-                                  marker=dict(size=36, color=COLOR_SEQ[0]),
-                                  text=[hid], textposition='middle center',
-                                  showlegend=False, textfont=dict(size=10)))
-        fig.add_trace(go.Scatter(x=[x], y=[2], mode='markers+text',
-                                  marker=dict(size=28, color=COLOR_SEQ[1]),
-                                  text=[out], textposition='middle center',
-                                  showlegend=False, textfont=dict(size=10)))
 
-    fig.update_layout(**PLOTLY_LAYOUT, height=280, title="Unrolled RNN",
-                       xaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
-                       yaxis=dict(showgrid=False, showticklabels=False, zeroline=False,
-                                  range=[-0.5, 2.5]),
-                       annotations=[
-                           dict(x=-0.5, y=0, text="Input", showarrow=False,
-                                font=dict(color='#8892A4', size=10)),
-                           dict(x=-0.5, y=1, text="Hidden", showarrow=False,
-                                font=dict(color='#8892A4', size=10)),
-                           dict(x=-0.5, y=2, text="Output", showarrow=False,
-                                font=dict(color='#8892A4', size=10)),
-                       ])
+        fig.add_trace(go.Scatter(
+            x=[x], y=[0],
+            mode='markers+text',
+            marker=dict(size=28, color=COLOR_SEQ[3]),
+            text=[lbl],
+            textposition='middle center',
+            showlegend=False,
+            textfont=dict(size=10)
+        ))
+
+        fig.add_trace(go.Scatter(
+            x=[x], y=[1],
+            mode='markers+text',
+            marker=dict(size=36, color=COLOR_SEQ[0]),
+            text=[hid],
+            textposition='middle center',
+            showlegend=False,
+            textfont=dict(size=10)
+        ))
+
+        fig.add_trace(go.Scatter(
+            x=[x], y=[2],
+            mode='markers+text',
+            marker=dict(size=28, color=COLOR_SEQ[1]),
+            text=[out],
+            textposition='middle center',
+            showlegend=False,
+            textfont=dict(size=10)
+        ))
+
+    # FIX: merge layout first
+    custom_layout = {**PLOTLY_LAYOUT}
+
+    custom_layout["xaxis"] = dict(
+        showgrid=False,
+        showticklabels=False,
+        zeroline=False
+    )
+
+    custom_layout["yaxis"] = dict(
+        showgrid=False,
+        showticklabels=False,
+        zeroline=False,
+        range=[-0.5, 2.5]
+    )
+
+    fig.update_layout(
+        **custom_layout,
+        height=280,
+        title="Unrolled RNN",
+        annotations=[
+            dict(
+                x=-0.5, y=0,
+                text="Input",
+                showarrow=False,
+                font=dict(color='#8892A4', size=10)
+            ),
+            dict(
+                x=-0.5, y=1,
+                text="Hidden",
+                showarrow=False,
+                font=dict(color='#8892A4', size=10)
+            ),
+            dict(
+                x=-0.5, y=2,
+                text="Output",
+                showarrow=False,
+                font=dict(color='#8892A4', size=10)
+            ),
+        ]
+    )
+
     return fig
 
 
@@ -1222,12 +1358,28 @@ def _draw_gan_diagram():
                    path='M 0.8,0.65 L 0.8,0.9 L 0.2,0.9 L 0.2,0.65',
                    line=dict(color='rgba(255,101,132,0.6)', width=1.5, dash='dot'))
 
-    fig.update_layout(**PLOTLY_LAYOUT, title="GAN Architecture",
-                       height=320,
-                       xaxis=dict(range=[-0.1,1.0], showgrid=False,
-                                  showticklabels=False, zeroline=False),
-                       yaxis=dict(range=[-0.05,1.0], showgrid=False,
-                                  showticklabels=False, zeroline=False))
+    custom_layout = {**PLOTLY_LAYOUT}
+
+    custom_layout["xaxis"] = dict(
+        range=[-0.1, 1.0],
+        showgrid=False,
+        showticklabels=False,
+        zeroline=False
+    )
+
+    custom_layout["yaxis"] = dict(
+        range=[-0.05, 1.0],
+        showgrid=False,
+        showticklabels=False,
+        zeroline=False
+    )
+
+    fig.update_layout(
+        **custom_layout,
+        title="GAN Architecture",
+        height=320
+    )
+
     return fig
 
 
