@@ -221,9 +221,9 @@ def route(user):
         show_projects(user); return
 
     # ── Tools ───────────────────────────────────────────
-    if page == "quiz":
-        from quizzes.quiz_ui import show_quiz
-        show_quiz(user); return
+    #if page == "quiz":
+        #from quizzes.quiz_ui import show_quiz
+       # show_quiz(user); return
 
     #if page == "resume":
      #  from resume_builder.resume_ui import show_resume_builder
