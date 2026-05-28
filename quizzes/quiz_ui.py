@@ -8,7 +8,7 @@ from database.db import get_questions, save_attempt, get_attempts, get_leaderboa
 from utils.styles import section_header, alert, kpi_card
 import plotly.graph_objects as go
 
-TOPICS = ["Statistics","Machine Learning", "Deep Learning", "NLP", "Python"]
+TOPICS = ["Statistics","Machine Learning", "Deep Learning", "NLP", "Python", "Gen AI"]
 DIFFICULTY_ICON = {"easy": "🟢", "medium": "🟡", "hard": "🔴"}
 
 
