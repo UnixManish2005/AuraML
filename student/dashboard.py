@@ -28,9 +28,14 @@ MODULES = [
 
 def show_dashboard(user):
     uid = user["id"]
-    section_header(f"Welcome back, {user['name'].split()[0]}! 🎯",
-                   "Here's your learning snapshot for today.")
-
+    st.markdown(
+    section_header(
+        "",
+        f"Heyy {user['name'].split()[0]} 👋🏻",
+        "Here's Your Learning Snapshot for Today."
+    ),
+    unsafe_allow_html=True
+)
     # ── KPI row ────────────────────────────────────────────────────────────
     progress_rows = get_progress(uid)
     attempts      = get_attempts(uid)

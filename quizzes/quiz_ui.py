@@ -113,7 +113,7 @@ def _quiz_lobby(uid):
 
     if max_q < 5:
         # If there are fewer than 5 questions, fall back gracefully
-        st.info(f"💡 Only {max_q} question(s) available for this selection. All available questions will be included.")
+        st.info(f"No Questions Available for this Module")
         num_q = max_q
     else:
         # Only render the slider if max_value is genuinely greater than or equal to min_value
