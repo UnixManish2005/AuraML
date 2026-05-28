@@ -106,7 +106,7 @@ def show_admin(user):
         with add_tab:
             c1, c2 = st.columns(2)
             with c1:
-                q_topic = st.selectbox("Topic", ["Machine Learning","Deep Learning","NLP","Python","Computer Vision"])
+                q_topic = st.selectbox("Topic", ["Statistics","Machine Learning","Deep Learning","NLP","Python","Computer Vision","Gen AI"])
                 q_diff  = st.selectbox("Difficulty", ["easy","medium","hard"])
                 q_type  = st.selectbox("Type", ["mcq","true_false"])
             with c2:
