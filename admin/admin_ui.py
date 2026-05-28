@@ -18,6 +18,15 @@ from database.db import (platform_stats, get_all_students, toggle_student,
 from utils.styles import section_header, kpi_card, alert
 
 
+def fmt_dt(value, fmt="%d %b %Y %H:%M"):
+    """Safely format datetime — handles both Python datetime objects and strings."""
+    if value is None:
+        return ""
+    if isinstance(value, datetime.datetime):
+        return value.strftime(fmt)
+    return str(value)[:16]
+
+
 # ── Safe query helper ─────────────────────────────────────────────────────────
 # Uses "with get_connection() as conn:" so it works with @contextmanager db.py
 
@@ -168,9 +177,9 @@ def show_admin(user):
         with add_tab:
             c1, c2 = st.columns(2)
             with c1:
-                q_topic = st.selectbox("Topic", ["Statistics",
+                q_topic = st.selectbox("Topic", [
                     "Machine Learning", "Deep Learning", "NLP",
-                    "Python", "Gen AI"])
+                    "Python", "Computer Vision"])
                 q_diff = st.selectbox("Difficulty", ["easy", "medium", "hard"])
                 q_type = st.selectbox("Type", ["mcq", "true_false"])
             with c2:
@@ -322,7 +331,7 @@ def show_admin(user):
                             border:1px solid rgba(108,99,255,0.2);margin-bottom:.5rem">
                     <strong style="color:#E8E8F0">{ann['title']}</strong>
                     <span style="float:right;color:#8888AA;font-size:.8rem">
-                        {str(ann['created_at'])[:16]}
+                        {fmt_dt(ann['created_at'])}
                     </span>
                     <p style="color:#AAAACC;font-size:.85rem;margin:.3rem 0 0">{ann['body']}</p>
                 </div>

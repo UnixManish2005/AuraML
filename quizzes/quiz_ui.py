@@ -7,8 +7,19 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from database.db import get_questions, save_attempt, get_attempts, get_leaderboard
 from utils.styles import section_header, alert, kpi_card
 import plotly.graph_objects as go
+from datetime import datetime
 
-TOPICS = ["Statistics","Machine Learning", "Deep Learning", "NLP", "Python", "Gen AI"]
+
+def fmt_dt(value, fmt="%d %b %Y %H:%M"):
+    """Safely format datetime — handles both Python datetime objects and strings."""
+    if value is None:
+        return ""
+    if isinstance(value, datetime):
+        return value.strftime(fmt)
+    return str(value)[:16]
+
+
+TOPICS = ["Machine Learning", "Deep Learning", "NLP", "Python"]
 DIFFICULTY_ICON = {"easy": "🟢", "medium": "🟡", "hard": "🔴"}
 
 
@@ -55,7 +66,7 @@ def show_quiz(user):
                         margin-bottom:0.5rem;border:1px solid rgba(108,99,255,0.15)">
                 <div style="flex:1">
                     <span style="font-weight:700;color:#E8E8F0">{a['topic']}</span>
-                    <span style="color:#8888AA;font-size:0.78rem;margin-left:0.5rem">{a['attempted_at'][:16]}</span>
+                    <span style="color:#8888AA;font-size:0.78rem;margin-left:0.5rem">{fmt_dt(a['attempted_at'])}</span>
                 </div>
                 <div style="text-align:right">
                     <span style="color:{color};font-size:1.2rem;font-weight:800">{pct}%</span>
@@ -91,18 +102,32 @@ def _quiz_lobby(uid):
     c1, c2 = st.columns(2)
     with c1:
         topic = st.selectbox("📚 Select Topic", TOPICS, key="quiz_topic_sel")
+
+        # Count available questions for the selected topic
+        available = get_questions(topic)
+        n_available = len(available)
+
+        # Let admin/student choose how many to attempt (up to all available)
+        max_q = max(n_available, 1)
+        num_q = st.slider("Number of questions", min_value=5,
+                          max_value=max_q, value=min(max_q, 20),
+                          step=5, key="quiz_num_q",
+                          disabled=(n_available < 5))
+
         st.markdown(f"""
         <div style="background:#1A1A2E;border-radius:12px;padding:1rem;
                     border:1px solid rgba(108,99,255,0.2);margin-top:0.5rem">
             <p style="color:#8888AA;margin:0;font-size:0.88rem">
-              🙀 Don't fear, just go for it....... &nbsp;&nbsp; Kyuki, Dar ke Agey Jeet Hai 🕺🏻 &nbsp;
+            ⏱ 30 seconds per question &nbsp;|&nbsp;
+            <b style="color:#6C63FF">{n_available} questions available</b>
+            &nbsp;|&nbsp; Auto-evaluated
             </p>
         </div>
         """, unsafe_allow_html=True)
     with c2:
         st.markdown("<br>", unsafe_allow_html=True)
         if st.button("🚀 Start Quiz!", use_container_width=True):
-            questions = get_questions(topic, limit=10)
+            questions = get_questions(topic, limit=num_q)
             if not questions:
                 alert(f"No questions available for **{topic}** yet.", "warning")
             else:

@@ -2,7 +2,17 @@
 
 import streamlit as st
 import sys, os
+from datetime import datetime
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+
+
+def fmt_dt(value, fmt="%d %b %Y"):
+    """Safely format datetime — handles both Python datetime objects and strings."""
+    if value is None:
+        return ""
+    if isinstance(value, datetime):
+        return value.strftime(fmt)
+    return str(value)[:10]
 
 from database.db import get_progress, get_attempts, get_certificates, get_announcements, platform_stats
 from utils.styles import kpi_card, section_header, alert, progress_chart, score_trend_chart, badge
@@ -18,14 +28,8 @@ MODULES = [
 
 def show_dashboard(user):
     uid = user["id"]
-    from utils.styles import welcome_message
-    st.markdown(
-    welcome_message(
-        user['name'].split()[0],
-        "Here's your learning snapshot for today."
-    ),
-    unsafe_allow_html=True
-)
+    section_header(f"Welcome back, {user['name'].split()[0]}! 🎯",
+                   "Here's your learning snapshot for today.")
 
     # ── KPI row ────────────────────────────────────────────────────────────
     progress_rows = get_progress(uid)
@@ -75,7 +79,7 @@ def show_dashboard(user):
                         border:1px solid rgba(108,99,255,0.2);border-radius:12px;
                         padding:1rem 1.2rem;margin-bottom:0.7rem;">
                 <span style="font-weight:700;color:#E8E8F0">{ann['title']}</span>
-                <span style="float:right;color:#8888AA;font-size:0.8rem">{ann['created_at'][:10]}</span>
+                <span style="float:right;color:#8888AA;font-size:0.8rem">{fmt_dt(ann['created_at'])}</span>
                 <p style="color:#AAAACC;font-size:0.88rem;margin-top:0.4rem;margin-bottom:0">{ann['body']}</p>
             </div>
             """, unsafe_allow_html=True)
@@ -97,6 +101,6 @@ def show_dashboard(user):
                 <span style="font-size:1.2rem">📝</span>
                 <span style="flex:1;color:#E8E8F0;font-weight:600">{a['topic']}</span>
                 <span style="color:{color};font-weight:700">{pct}%</span>
-                <span style="color:#8888AA;font-size:0.8rem">{a['attempted_at'][:10]}</span>
+                <span style="color:#8888AA;font-size:0.8rem">{fmt_dt(a['attempted_at'])}</span>
             </div>
             """, unsafe_allow_html=True)
