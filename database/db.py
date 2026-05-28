@@ -215,7 +215,7 @@ def get_progress(user_id):
 
 # ── Quiz helpers ─────────────────────────────────────────────────────────────
 
-def get_questions(topic, limit=10):
+def get_questions(topic, limit=50):
     conn = get_connection()
     c = conn.cursor()
     c.execute("SELECT * FROM quiz_questions WHERE topic=? ORDER BY RANDOM() LIMIT ?",
@@ -251,13 +251,13 @@ def get_leaderboard(topic=None):
             SELECT u.name, MAX(a.score*100/a.total) as best_pct, COUNT(*) as attempts
             FROM quiz_attempts a JOIN users u ON a.user_id=u.id
             WHERE a.topic=?
-            GROUP BY a.user_id ORDER BY best_pct DESC LIMIT 10
+            GROUP BY a.user_id ORDER BY best_pct DESC LIMIT 50
         """, (topic,))
     else:
         c.execute("""
             SELECT u.name, AVG(a.score*100.0/a.total) as avg_pct, COUNT(*) as attempts
             FROM quiz_attempts a JOIN users u ON a.user_id=u.id
-            GROUP BY a.user_id ORDER BY avg_pct DESC LIMIT 10
+            GROUP BY a.user_id ORDER BY avg_pct DESC LIMIT 50
         """)
     rows = [dict(r) for r in c.fetchall()]
     conn.close()
@@ -334,7 +334,7 @@ def add_announcement(title, body, user_id):
 def get_announcements():
     conn = get_connection()
     c = conn.cursor()
-    c.execute("SELECT * FROM announcements ORDER BY created_at DESC LIMIT 10")
+    c.execute("SELECT * FROM announcements ORDER BY created_at DESC LIMIT 50")
     rows = [dict(r) for r in c.fetchall()]
     conn.close()
     return rows
