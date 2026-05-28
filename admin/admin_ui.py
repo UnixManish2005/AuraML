@@ -46,7 +46,7 @@ def show_admin(user):
                 df = pd.DataFrame(board)
                 df.columns = ["Name", "Avg Score (%)", "Attempts"]
                 df["Avg Score (%)"] = df["Avg Score (%)"].round(1)
-                st.dataframe(df.head(10), use_container_width=True, hide_index=True)
+                st.dataframe(df.head(10), width="stretch", hide_index=True)
             else:
                 alert("No quiz data yet.", "info")
 
@@ -66,7 +66,7 @@ def show_admin(user):
                                margin=dict(l=0,r=0,t=10,b=10),
                                xaxis=dict(showgrid=False,color="#8888AA"),
                                yaxis=dict(showgrid=False,color="#8888AA"))
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
     # ── Tab 2: Students ────────────────────────────────────────────────────
     with tab2:
@@ -82,7 +82,7 @@ def show_admin(user):
                         df["email"].str.contains(search, case=False)]
             df["Status"] = df["is_active"].map({1:"🟢 Active", 0:"🔴 Blocked"})
             st.dataframe(df[["id","name","email","Status","created_at"]],
-                         use_container_width=True, hide_index=True)
+                         width="stretch", hide_index=True)
 
             st.markdown("#### 🔧 Block / Unblock Student")
             c1, c2, c3 = st.columns(3)
@@ -92,7 +92,7 @@ def show_admin(user):
                 action = st.selectbox("Action", ["Unblock (Activate)", "Block (Deactivate)"])
             with c3:
                 st.markdown("<br>", unsafe_allow_html=True)
-                if st.button("Apply", use_container_width=True):
+                if st.button("Apply", width="stretch"):
                     toggle_student(sid, action.startswith("Unblock"))
                     st.success(f"✅ Student {sid} {action.split()[0].lower()}ed.")
                     st.rerun()
@@ -118,7 +118,7 @@ def show_admin(user):
             q_c = st.text_input("Option C", key="qc")
             q_d = st.text_input("Option D", key="qd")
 
-            if st.button("✅ Add Question", use_container_width=True):
+            if st.button("✅ Add Question", width="stretch"):
                 if q_text and q_a and q_b:
                     add_question(q_topic, q_text, q_a, q_b, q_c, q_d,
                                  q_ans, q_diff, q_type, user["id"])
@@ -128,11 +128,11 @@ def show_admin(user):
 
         # ── Manage / Delete ───────────────────────────────────────────────
         with manage_tab:
-            conn = get_connection()
-            df_q = pd.read_sql(
-                "SELECT id, topic, question, answer, difficulty FROM quiz_questions ORDER BY id DESC",
-                conn)
-            conn.close()
+            with get_connection() as conn:
+                df_q = pd.read_sql(
+                    "SELECT id, topic, question, answer, difficulty FROM questions",
+                    conn
+                )
 
             if df_q.empty:
                 alert("No questions in the database yet.", "info")
@@ -143,7 +143,7 @@ def show_admin(user):
                 df_view = df_q if filter_topic == "All" else df_q[df_q["topic"] == filter_topic]
 
                 st.markdown(f"Showing **{len(df_view)}** question(s)")
-                st.dataframe(df_view, use_container_width=True, hide_index=True)
+                st.dataframe(df_view, width="stretch", hide_index=True)
 
                 st.markdown("---")
                 st.markdown("#### 🗑️ Delete a Question")
@@ -159,7 +159,7 @@ def show_admin(user):
                 with c2:
                     st.markdown("<br>", unsafe_allow_html=True)
                     # Two-step confirm to prevent accidental deletion
-                    if st.button("🗑️ Delete Question", use_container_width=True):
+                    if st.button("🗑️ Delete Question", width="stretch"):
                         st.session_state["confirm_delete_id"] = del_id
 
                 # Confirmation step
@@ -182,13 +182,13 @@ def show_admin(user):
                         """, unsafe_allow_html=True)
                         col_yes, col_no = st.columns(2)
                         with col_yes:
-                            if st.button("✅ Yes, delete it", use_container_width=True, key="confirm_yes"):
+                            if st.button("✅ Yes, delete it", width="stretch", key="confirm_yes"):
                                 delete_question(cid)
                                 st.session_state.pop("confirm_delete_id", None)
                                 st.success(f"🗑️ Question ID {cid} deleted successfully.")
                                 st.rerun()
                         with col_no:
-                            if st.button("❌ Cancel", use_container_width=True, key="confirm_no"):
+                            if st.button("❌ Cancel", width="stretch", key="confirm_no"):
                                 st.session_state.pop("confirm_delete_id", None)
                                 st.rerun()
 
@@ -210,7 +210,7 @@ def show_admin(user):
                                    coloraxis_showscale=False,
                                    xaxis=dict(showgrid=False,color="#E8E8F0"),
                                    yaxis=dict(showgrid=False,color="#8888AA"))
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
             else:
                 alert("No quiz attempts recorded yet.", "info")
 
@@ -219,7 +219,7 @@ def show_admin(user):
         st.markdown("#### 📢 Post Announcement")
         ann_title = st.text_input("Title", key="ann_title")
         ann_body  = st.text_area("Message", key="ann_body", height=120)
-        if st.button("📢 Post Announcement", use_container_width=True):
+        if st.button("📢 Post Announcement", width="stretch"):
             if ann_title and ann_body:
                 add_announcement(ann_title, ann_body, user["id"])
                 st.success("✅ Announcement posted!")
@@ -267,7 +267,7 @@ def show_admin(user):
                                    margin=dict(l=0,r=0,t=10,b=10),
                                    xaxis=dict(showgrid=False,color="#E8E8F0",tickangle=30),
                                    yaxis=dict(showgrid=False,color="#8888AA"))
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
 
         with c2:
             if not df_certs.empty:
@@ -279,7 +279,7 @@ def show_admin(user):
                                     font=dict(color="#E8E8F0"), height=280,
                                     legend=dict(bgcolor="rgba(0,0,0,0)",font=dict(size=10)),
                                     margin=dict(l=0,r=0,t=10,b=10))
-                st.plotly_chart(fig2, use_container_width=True)
+                st.plotly_chart(fig2, width="stretch")
 
         if df_prog.empty and df_certs.empty:
             alert("Analytics will appear as students use the platform.", "info")
