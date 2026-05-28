@@ -12,6 +12,14 @@ from database.db import (platform_stats, get_all_students, toggle_student,
 from utils.styles import section_header, kpi_card, alert
 
 
+def delete_question(question_id: int):
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute("DELETE FROM quiz_questions WHERE id=?", (question_id,))
+    conn.commit()
+    conn.close()
+
+
 def show_admin(user):
     section_header("⚙️ Admin Control Panel", "Manage the entire AILearn Pro platform.")
 
@@ -91,55 +99,120 @@ def show_admin(user):
 
     # ── Tab 3: Quiz Manager ────────────────────────────────────────────────
     with tab3:
-        st.markdown("#### ➕ Add New Question")
-        c1, c2 = st.columns(2)
-        with c1:
-            q_topic = st.selectbox("Topic", ["Statistics","Machine Learning","Deep Learning","NLP","Python","Computer Vision"])
-            q_diff  = st.selectbox("Difficulty", ["easy","medium","hard"])
-            q_type  = st.selectbox("Type", ["mcq","true_false"])
-        with c2:
-            q_text = st.text_area("Question text", key="q_text", height=100)
-            q_ans  = st.selectbox("Correct answer", ["A","B","C","D"])
+        add_tab, manage_tab, stats_tab = st.tabs(
+            ["➕ Add Question", "🗑️ Manage Questions", "📊 Quiz Stats"])
 
-        q_a = st.text_input("Option A", key="qa")
-        q_b = st.text_input("Option B", key="qb")
-        q_c = st.text_input("Option C", key="qc")
-        q_d = st.text_input("Option D", key="qd")
+        # ── Add ───────────────────────────────────────────────────────────
+        with add_tab:
+            c1, c2 = st.columns(2)
+            with c1:
+                q_topic = st.selectbox("Topic", ["Machine Learning","Deep Learning","NLP","Python","Computer Vision"])
+                q_diff  = st.selectbox("Difficulty", ["easy","medium","hard"])
+                q_type  = st.selectbox("Type", ["mcq","true_false"])
+            with c2:
+                q_text = st.text_area("Question text", key="q_text", height=100)
+                q_ans  = st.selectbox("Correct answer", ["A","B","C","D"])
 
-        if st.button("✅ Add Question", use_container_width=True):
-            if q_text and q_a and q_b:
-                add_question(q_topic, q_text, q_a, q_b, q_c, q_d,
-                             q_ans, q_diff, q_type, user["id"])
-                st.success("✅ Question added!")
+            q_a = st.text_input("Option A", key="qa")
+            q_b = st.text_input("Option B", key="qb")
+            q_c = st.text_input("Option C", key="qc")
+            q_d = st.text_input("Option D", key="qd")
+
+            if st.button("✅ Add Question", use_container_width=True):
+                if q_text and q_a and q_b:
+                    add_question(q_topic, q_text, q_a, q_b, q_c, q_d,
+                                 q_ans, q_diff, q_type, user["id"])
+                    st.success("✅ Question added!")
+                else:
+                    st.warning("Fill in question text and at least options A & B.")
+
+        # ── Manage / Delete ───────────────────────────────────────────────
+        with manage_tab:
+            conn = get_connection()
+            df_q = pd.read_sql(
+                "SELECT id, topic, question, answer, difficulty FROM quiz_questions ORDER BY id DESC",
+                conn)
+            conn.close()
+
+            if df_q.empty:
+                alert("No questions in the database yet.", "info")
             else:
-                st.warning("Fill in question text and at least options A & B.")
+                # Filter by topic
+                topics_available = ["All"] + sorted(df_q["topic"].unique().tolist())
+                filter_topic = st.selectbox("Filter by topic", topics_available, key="del_filter")
+                df_view = df_q if filter_topic == "All" else df_q[df_q["topic"] == filter_topic]
 
-        st.markdown("---")
-        st.markdown("#### 📋 Existing Questions")
-        conn = get_connection()
-        df_q = pd.read_sql("SELECT id,topic,question,answer,difficulty FROM quiz_questions ORDER BY id DESC LIMIT 50",
-                            conn)
-        conn.close()
-        st.dataframe(df_q, use_container_width=True, hide_index=True)
+                st.markdown(f"Showing **{len(df_view)}** question(s)")
+                st.dataframe(df_view, use_container_width=True, hide_index=True)
 
-        st.markdown("#### 📊 Quiz Attempt Stats")
-        conn = get_connection()
-        df_a = pd.read_sql("""
-            SELECT topic, COUNT(*) as attempts, ROUND(AVG(score*100.0/total),1) as avg_pct
-            FROM quiz_attempts GROUP BY topic ORDER BY attempts DESC
-        """, conn)
-        conn.close()
-        if not df_a.empty:
-            fig = px.bar(df_a, x="topic", y="avg_pct", color="attempts",
-                         color_continuous_scale=["#1A1A2E","#6C63FF"],
-                         labels={"avg_pct":"Avg Score (%)","topic":"Topic"})
-            fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                               font=dict(color="#E8E8F0"), height=300,
-                               margin=dict(l=0,r=0,t=10,b=10),
-                               coloraxis_showscale=False,
-                               xaxis=dict(showgrid=False,color="#E8E8F0"),
-                               yaxis=dict(showgrid=False,color="#8888AA"))
-            st.plotly_chart(fig, use_container_width=True)
+                st.markdown("---")
+                st.markdown("#### 🗑️ Delete a Question")
+                alert("⚠️ Deletion is permanent and cannot be undone.", "warning")
+
+                c1, c2 = st.columns([2, 1])
+                with c1:
+                    del_id = st.number_input(
+                        "Enter Question ID to delete",
+                        min_value=1, step=1, key="del_q_id",
+                        help="Copy the ID from the table above"
+                    )
+                with c2:
+                    st.markdown("<br>", unsafe_allow_html=True)
+                    # Two-step confirm to prevent accidental deletion
+                    if st.button("🗑️ Delete Question", use_container_width=True):
+                        st.session_state["confirm_delete_id"] = del_id
+
+                # Confirmation step
+                if st.session_state.get("confirm_delete_id"):
+                    cid = st.session_state["confirm_delete_id"]
+                    match = df_q[df_q["id"] == cid]
+                    if match.empty:
+                        st.error(f"❌ No question found with ID {cid}.")
+                        st.session_state.pop("confirm_delete_id", None)
+                    else:
+                        q_preview = match.iloc[0]["question"]
+                        st.markdown(f"""
+                        <div style="background:rgba(255,101,132,0.1);border:1px solid rgba(255,101,132,0.4);
+                                    border-radius:12px;padding:1rem 1.2rem;margin:0.5rem 0">
+                            <p style="color:#FF6584;font-weight:700;margin:0 0 .4rem">
+                                ⚠️ Confirm deletion of Question ID {cid}
+                            </p>
+                            <p style="color:#CCCCEE;font-size:.88rem;margin:0">"{q_preview}"</p>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        col_yes, col_no = st.columns(2)
+                        with col_yes:
+                            if st.button("✅ Yes, delete it", use_container_width=True, key="confirm_yes"):
+                                delete_question(cid)
+                                st.session_state.pop("confirm_delete_id", None)
+                                st.success(f"🗑️ Question ID {cid} deleted successfully.")
+                                st.rerun()
+                        with col_no:
+                            if st.button("❌ Cancel", use_container_width=True, key="confirm_no"):
+                                st.session_state.pop("confirm_delete_id", None)
+                                st.rerun()
+
+        # ── Stats ─────────────────────────────────────────────────────────
+        with stats_tab:
+            conn = get_connection()
+            df_a = pd.read_sql("""
+                SELECT topic, COUNT(*) as attempts, ROUND(AVG(score*100.0/total),1) as avg_pct
+                FROM quiz_attempts GROUP BY topic ORDER BY attempts DESC
+            """, conn)
+            conn.close()
+            if not df_a.empty:
+                fig = px.bar(df_a, x="topic", y="avg_pct", color="attempts",
+                             color_continuous_scale=["#1A1A2E","#6C63FF"],
+                             labels={"avg_pct":"Avg Score (%)","topic":"Topic"})
+                fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                                   font=dict(color="#E8E8F0"), height=300,
+                                   margin=dict(l=0,r=0,t=10,b=10),
+                                   coloraxis_showscale=False,
+                                   xaxis=dict(showgrid=False,color="#E8E8F0"),
+                                   yaxis=dict(showgrid=False,color="#8888AA"))
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                alert("No quiz attempts recorded yet.", "info")
 
     # ── Tab 4: Announcements ───────────────────────────────────────────────
     with tab4:
