@@ -166,9 +166,9 @@ def route(user):
         show_dashboard(user); return
 
     # ── Original learning modules ───────────────────────
-    if page == "modules":
-        from student.modules import show_modules
-        show_modules(user); return
+    #if page == "modules":
+        #from student.modules import show_modules
+        #show_modules(user); return
 
     # ── Deep Learning Labs ──────────────────────────────
     if page == "deep_learning":
@@ -225,21 +225,21 @@ def route(user):
         from quizzes.quiz_ui import show_quiz
         show_quiz(user); return
 
-    if page == "resume":
-        from resume_builder.resume_ui import show_resume_builder
-        show_resume_builder(user); return
+    #if page == "resume":
+        #from resume_builder.resume_ui import show_resume_builder
+        #show_resume_builder(user); return
 
     if page == "notes":
         from student.projects import show_notes
         show_notes(user); return
 
-    if page == "certificates":
-        from student.certificates import show_certificates
-        show_certificates(user); return
+    #if page == "certificates":
+        #from student.certificates import show_certificates
+        #show_certificates(user); return
 
-    if page == "chatbot":
-        from ai_modules.chatbot import show_ai_tutor
-        show_ai_tutor(user); return
+    #if page == "chatbot":
+        #from ai_modules.chatbot import show_ai_tutor
+        #show_ai_tutor(user); return
 
     # Fallback
     from student.dashboard import show_dashboard
