@@ -19,7 +19,7 @@ def fmt_dt(value, fmt="%d %b %Y %H:%M"):
     return str(value)[:16]
 
 
-TOPICS = ["Machine Learning", "Deep Learning", "NLP", "Python"]
+TOPICS = ["Statistics","Machine Learning", "Deep Learning", "NLP", "Python", "Gen AI"]
 DIFFICULTY_ICON = {"easy": "🟢", "medium": "🟡", "hard": "🔴"}
 
 
