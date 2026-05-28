@@ -109,10 +109,22 @@ def _quiz_lobby(uid):
 
         # Let admin/student choose how many to attempt (up to all available)
         max_q = max(n_available, 1)
-        num_q = st.slider("Number of questions", min_value=5,
-                          max_value=max_q, value=min(max_q, 20),
-                          step=5, key="quiz_num_q",
-                          disabled=(n_available < 5))
+        # --- Replace the old st.slider section with this logic ---
+
+    if max_q < 5:
+        # If there are fewer than 5 questions, fall back gracefully
+        st.info(f"💡 Only {max_q} question(s) available for this selection. All available questions will be included.")
+        num_q = max_q
+    else:
+        # Only render the slider if max_value is genuinely greater than or equal to min_value
+        num_q = st.slider(
+            "Number of questions", 
+            min_value=5,
+            max_value=max_q, 
+            value=min(max_q, 20),
+            step=5, 
+            key="quiz_num_q"
+        )
 
         st.markdown(f"""
         <div style="background:#1A1A2E;border-radius:12px;padding:1rem;
