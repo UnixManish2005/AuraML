@@ -1,24 +1,64 @@
-"""Admin Panel — Dashboard, Student Mgmt, Quiz Mgmt, Announcements."""
+"""Admin Panel — Dashboard, Student Mgmt, Quiz Mgmt, Announcements.
+Compatible with both SQLite and PostgreSQL (psycopg2).
+"""
 
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+import datetime
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+
 from database.db import (platform_stats, get_all_students, toggle_student,
                           get_leaderboard, add_question, add_announcement,
                           get_announcements, get_connection)
 from utils.styles import section_header, kpi_card, alert
 
 
-def delete_question(question_id: int):
-    conn = get_connection()
-    c = conn.cursor()
-    c.execute("DELETE FROM quiz_questions WHERE id=?", (question_id,))
-    conn.commit()
-    conn.close()
+# ── DB helpers ────────────────────────────────────────────────────────────────
 
+def _placeholder():
+    """Return correct SQL placeholder for the active DB driver."""
+    try:
+        import psycopg2
+        conn = get_connection()
+        if isinstance(conn, psycopg2.extensions.connection):
+            conn.close()
+            return "%s"
+    except Exception:
+        pass
+    return "?"
+
+
+def _query_df(sql: str, params=None) -> pd.DataFrame:
+    """Run a SELECT and return a DataFrame — works with both SQLite & psycopg2."""
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute(sql, params or ())
+        cols = [d[0] for d in cur.description]
+        rows = cur.fetchall()
+        return pd.DataFrame(rows, columns=cols)
+    except Exception as e:
+        st.error(f"Query error: {e}")
+        return pd.DataFrame()
+    finally:
+        conn.close()
+
+
+def delete_question(question_id: int):
+    ph = _placeholder()
+    conn = get_connection()
+    try:
+        c = conn.cursor()
+        c.execute(f"DELETE FROM quiz_questions WHERE id={ph}", (question_id,))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+# ── Main admin page ───────────────────────────────────────────────────────────
 
 def show_admin(user):
     section_header("⚙️ Admin Control Panel", "Manage the entire AILearn Pro platform.")
@@ -30,43 +70,40 @@ def show_admin(user):
     with tab1:
         stats = platform_stats()
         c1, c2, c3, c4 = st.columns(4)
-        with c1: kpi_card("Total Students", stats["students"],   "👥")
-        with c2: kpi_card("Quiz Attempts",  stats["attempts"],   "📝")
-        with c3: kpi_card("Certificates",   stats["certs"],      "🎓")
-        with c4: kpi_card("Questions",       stats["questions"],  "❓")
+        with c1: kpi_card("Total Students", stats["students"], "👥")
+        with c2: kpi_card("Quiz Attempts",  stats["attempts"], "📝")
+        with c3: kpi_card("Certificates",   stats["certs"],    "🎓")
+        with c4: kpi_card("Questions",       stats["questions"],"❓")
 
         st.markdown("<br>", unsafe_allow_html=True)
 
-        # Leaderboard preview
         c_left, c_right = st.columns(2)
         with c_left:
             st.markdown("#### 🏆 Top Performers")
             board = get_leaderboard()
             if board:
-                df = pd.DataFrame(board)
-                df.columns = ["Name", "Avg Score (%)", "Attempts"]
-                df["Avg Score (%)"] = df["Avg Score (%)"].round(1)
-                st.dataframe(df.head(10), width="stretch", hide_index=True)
+                df_board = pd.DataFrame(board)
+                df_board.columns = ["Name", "Avg Score (%)", "Attempts"]
+                df_board["Avg Score (%)"] = df_board["Avg Score (%)"].round(1)
+                st.dataframe(df_board.head(10), use_container_width=True, hide_index=True)
             else:
                 alert("No quiz data yet.", "info")
 
         with c_right:
-            st.markdown("#### 📊 Platform Activity")
-            # Simulate activity data for demo
-            import datetime
-            days  = [(datetime.date.today() - datetime.timedelta(days=i)).strftime("%d %b")
-                     for i in range(6, -1, -1)]
+            st.markdown("#### 📊 Platform Activity (Last 7 Days)")
+            days = [(datetime.date.today() - datetime.timedelta(days=i)).strftime("%d %b")
+                    for i in range(6, -1, -1)]
             activity = [12, 18, 9, 22, 15, 28, 20]
             fig = go.Figure()
             fig.add_trace(go.Bar(x=days, y=activity,
-                                  marker_color=["#6C63FF","#8B5CF6","#FF6584","#6C63FF",
-                                                "#43D9AD","#FFB547","#6C63FF"]))
+                                  marker_color=["#6C63FF","#8B5CF6","#FF6584",
+                                                "#6C63FF","#43D9AD","#FFB547","#6C63FF"]))
             fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                                font=dict(color="#E8E8F0"), height=280,
                                margin=dict(l=0,r=0,t=10,b=10),
-                               xaxis=dict(showgrid=False,color="#8888AA"),
-                               yaxis=dict(showgrid=False,color="#8888AA"))
-            st.plotly_chart(fig, width="stretch")
+                               xaxis=dict(showgrid=False, color="#8888AA"),
+                               yaxis=dict(showgrid=False, color="#8888AA"))
+            st.plotly_chart(fig, use_container_width=True)
 
     # ── Tab 2: Students ────────────────────────────────────────────────────
     with tab2:
@@ -76,13 +113,15 @@ def show_admin(user):
             alert("No students registered yet.", "info")
         else:
             search = st.text_input("🔍 Search by name or email", key="admin_search")
-            df = pd.DataFrame(students)
+            df_stu = pd.DataFrame(students)
             if search:
-                df = df[df["name"].str.contains(search, case=False) |
-                        df["email"].str.contains(search, case=False)]
-            df["Status"] = df["is_active"].map({1:"🟢 Active", 0:"🔴 Blocked"})
-            st.dataframe(df[["id","name","email","Status","created_at"]],
-                         width="stretch", hide_index=True)
+                df_stu = df_stu[
+                    df_stu["name"].str.contains(search, case=False, na=False) |
+                    df_stu["email"].str.contains(search, case=False, na=False)
+                ]
+            df_stu["Status"] = df_stu["is_active"].map({1: "🟢 Active", 0: "🔴 Blocked"})
+            st.dataframe(df_stu[["id","name","email","Status","created_at"]],
+                         use_container_width=True, hide_index=True)
 
             st.markdown("#### 🔧 Block / Unblock Student")
             c1, c2, c3 = st.columns(3)
@@ -92,7 +131,7 @@ def show_admin(user):
                 action = st.selectbox("Action", ["Unblock (Activate)", "Block (Deactivate)"])
             with c3:
                 st.markdown("<br>", unsafe_allow_html=True)
-                if st.button("Apply", width="stretch"):
+                if st.button("Apply", use_container_width=True):
                     toggle_student(sid, action.startswith("Unblock"))
                     st.success(f"✅ Student {sid} {action.split()[0].lower()}ed.")
                     st.rerun()
@@ -106,7 +145,9 @@ def show_admin(user):
         with add_tab:
             c1, c2 = st.columns(2)
             with c1:
-                q_topic = st.selectbox("Topic", ["Statistics","Machine Learning","Deep Learning","NLP","Python","Computer Vision","Gen AI"])
+                q_topic = st.selectbox("Topic", [
+                    "Machine Learning","Deep Learning","NLP",
+                    "Python","Computer Vision"])
                 q_diff  = st.selectbox("Difficulty", ["easy","medium","hard"])
                 q_type  = st.selectbox("Type", ["mcq","true_false"])
             with c2:
@@ -118,32 +159,31 @@ def show_admin(user):
             q_c = st.text_input("Option C", key="qc")
             q_d = st.text_input("Option D", key="qd")
 
-            if st.button("✅ Add Question", width="stretch"):
+            if st.button("✅ Add Question", use_container_width=True):
                 if q_text and q_a and q_b:
                     add_question(q_topic, q_text, q_a, q_b, q_c, q_d,
                                  q_ans, q_diff, q_type, user["id"])
                     st.success("✅ Question added!")
+                    st.rerun()
                 else:
                     st.warning("Fill in question text and at least options A & B.")
 
         # ── Manage / Delete ───────────────────────────────────────────────
         with manage_tab:
-            with get_connection() as conn:
-                df_q = pd.read_sql(
-                    "SELECT id, topic, question, answer, difficulty FROM questions",
-                    conn
-                )
+            df_q = _query_df(
+                "SELECT id, topic, question, answer, difficulty "
+                "FROM quiz_questions ORDER BY id DESC"
+            )
 
             if df_q.empty:
                 alert("No questions in the database yet.", "info")
             else:
-                # Filter by topic
                 topics_available = ["All"] + sorted(df_q["topic"].unique().tolist())
                 filter_topic = st.selectbox("Filter by topic", topics_available, key="del_filter")
                 df_view = df_q if filter_topic == "All" else df_q[df_q["topic"] == filter_topic]
 
                 st.markdown(f"Showing **{len(df_view)}** question(s)")
-                st.dataframe(df_view, width="stretch", hide_index=True)
+                st.dataframe(df_view, use_container_width=True, hide_index=True)
 
                 st.markdown("---")
                 st.markdown("#### 🗑️ Delete a Question")
@@ -158,11 +198,9 @@ def show_admin(user):
                     )
                 with c2:
                     st.markdown("<br>", unsafe_allow_html=True)
-                    # Two-step confirm to prevent accidental deletion
-                    if st.button("🗑️ Delete Question", width="stretch"):
-                        st.session_state["confirm_delete_id"] = del_id
+                    if st.button("🗑️ Delete Question", use_container_width=True):
+                        st.session_state["confirm_delete_id"] = int(del_id)
 
-                # Confirmation step
                 if st.session_state.get("confirm_delete_id"):
                     cid = st.session_state["confirm_delete_id"]
                     match = df_q[df_q["id"] == cid]
@@ -172,8 +210,9 @@ def show_admin(user):
                     else:
                         q_preview = match.iloc[0]["question"]
                         st.markdown(f"""
-                        <div style="background:rgba(255,101,132,0.1);border:1px solid rgba(255,101,132,0.4);
-                                    border-radius:12px;padding:1rem 1.2rem;margin:0.5rem 0">
+                        <div style="background:rgba(255,101,132,0.1);
+                                    border:1px solid rgba(255,101,132,0.4);
+                                    border-radius:12px;padding:1rem 1.2rem;margin:.5rem 0">
                             <p style="color:#FF6584;font-weight:700;margin:0 0 .4rem">
                                 ⚠️ Confirm deletion of Question ID {cid}
                             </p>
@@ -182,24 +221,28 @@ def show_admin(user):
                         """, unsafe_allow_html=True)
                         col_yes, col_no = st.columns(2)
                         with col_yes:
-                            if st.button("✅ Yes, delete it", width="stretch", key="confirm_yes"):
+                            if st.button("✅ Yes, delete it", use_container_width=True,
+                                         key="confirm_yes"):
                                 delete_question(cid)
                                 st.session_state.pop("confirm_delete_id", None)
-                                st.success(f"🗑️ Question ID {cid} deleted successfully.")
+                                st.success(f"🗑️ Question ID {cid} deleted.")
                                 st.rerun()
                         with col_no:
-                            if st.button("❌ Cancel", width="stretch", key="confirm_no"):
+                            if st.button("❌ Cancel", use_container_width=True,
+                                         key="confirm_no"):
                                 st.session_state.pop("confirm_delete_id", None)
                                 st.rerun()
 
         # ── Stats ─────────────────────────────────────────────────────────
         with stats_tab:
-            conn = get_connection()
-            df_a = pd.read_sql("""
-                SELECT topic, COUNT(*) as attempts, ROUND(AVG(score*100.0/total),1) as avg_pct
-                FROM quiz_attempts GROUP BY topic ORDER BY attempts DESC
-            """, conn)
-            conn.close()
+            df_a = _query_df("""
+                SELECT topic,
+                       COUNT(*) AS attempts,
+                       ROUND(AVG(score * 100.0 / total), 1) AS avg_pct
+                FROM quiz_attempts
+                GROUP BY topic
+                ORDER BY attempts DESC
+            """)
             if not df_a.empty:
                 fig = px.bar(df_a, x="topic", y="avg_pct", color="attempts",
                              color_continuous_scale=["#1A1A2E","#6C63FF"],
@@ -208,9 +251,9 @@ def show_admin(user):
                                    font=dict(color="#E8E8F0"), height=300,
                                    margin=dict(l=0,r=0,t=10,b=10),
                                    coloraxis_showscale=False,
-                                   xaxis=dict(showgrid=False,color="#E8E8F0"),
-                                   yaxis=dict(showgrid=False,color="#8888AA"))
-                st.plotly_chart(fig, width="stretch")
+                                   xaxis=dict(showgrid=False, color="#E8E8F0"),
+                                   yaxis=dict(showgrid=False, color="#8888AA"))
+                st.plotly_chart(fig, use_container_width=True)
             else:
                 alert("No quiz attempts recorded yet.", "info")
 
@@ -219,10 +262,11 @@ def show_admin(user):
         st.markdown("#### 📢 Post Announcement")
         ann_title = st.text_input("Title", key="ann_title")
         ann_body  = st.text_area("Message", key="ann_body", height=120)
-        if st.button("📢 Post Announcement", width="stretch"):
+        if st.button("📢 Post Announcement", use_container_width=True):
             if ann_title and ann_body:
                 add_announcement(ann_title, ann_body, user["id"])
                 st.success("✅ Announcement posted!")
+                st.rerun()
             else:
                 st.warning("Fill in title and message.")
 
@@ -232,11 +276,13 @@ def show_admin(user):
         if anns:
             for ann in anns:
                 st.markdown(f"""
-                <div style="background:#1A1A2E;border-radius:10px;padding:0.8rem 1rem;
-                            border:1px solid rgba(108,99,255,0.2);margin-bottom:0.5rem">
+                <div style="background:#1A1A2E;border-radius:10px;padding:.8rem 1rem;
+                            border:1px solid rgba(108,99,255,0.2);margin-bottom:.5rem">
                     <strong style="color:#E8E8F0">{ann['title']}</strong>
-                    <span style="float:right;color:#8888AA;font-size:0.8rem">{ann['created_at'][:16]}</span>
-                    <p style="color:#AAAACC;font-size:0.85rem;margin:0.3rem 0 0">{ann['body']}</p>
+                    <span style="float:right;color:#8888AA;font-size:.8rem">
+                        {str(ann['created_at'])[:16]}
+                    </span>
+                    <p style="color:#AAAACC;font-size:.85rem;margin:.3rem 0 0">{ann['body']}</p>
                 </div>
                 """, unsafe_allow_html=True)
         else:
@@ -246,15 +292,19 @@ def show_admin(user):
     with tab5:
         st.markdown("#### 📈 Platform Analytics")
 
-        conn = get_connection()
-        df_prog = pd.read_sql("""
-            SELECT module, COUNT(*) as learners, AVG(progress_pct) as avg_pct
-            FROM learning_progress GROUP BY module ORDER BY learners DESC
-        """, conn)
-        df_certs = pd.read_sql("""
-            SELECT course, COUNT(*) as count FROM certificates GROUP BY course
-        """, conn)
-        conn.close()
+        df_prog = _query_df("""
+            SELECT module,
+                   COUNT(*) AS learners,
+                   AVG(progress_pct) AS avg_pct
+            FROM learning_progress
+            GROUP BY module
+            ORDER BY learners DESC
+        """)
+        df_certs = _query_df("""
+            SELECT course, COUNT(*) AS count
+            FROM certificates
+            GROUP BY course
+        """)
 
         c1, c2 = st.columns(2)
         with c1:
@@ -265,9 +315,9 @@ def show_admin(user):
                 fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                                    font=dict(color="#E8E8F0"), height=280,
                                    margin=dict(l=0,r=0,t=10,b=10),
-                                   xaxis=dict(showgrid=False,color="#E8E8F0",tickangle=30),
-                                   yaxis=dict(showgrid=False,color="#8888AA"))
-                st.plotly_chart(fig, width="stretch")
+                                   xaxis=dict(showgrid=False, color="#E8E8F0", tickangle=30),
+                                   yaxis=dict(showgrid=False, color="#8888AA"))
+                st.plotly_chart(fig, use_container_width=True)
 
         with c2:
             if not df_certs.empty:
@@ -277,9 +327,9 @@ def show_admin(user):
                               hole=0.45)
                 fig2.update_layout(paper_bgcolor="rgba(0,0,0,0)",
                                     font=dict(color="#E8E8F0"), height=280,
-                                    legend=dict(bgcolor="rgba(0,0,0,0)",font=dict(size=10)),
+                                    legend=dict(bgcolor="rgba(0,0,0,0)", font=dict(size=10)),
                                     margin=dict(l=0,r=0,t=10,b=10))
-                st.plotly_chart(fig2, width="stretch")
+                st.plotly_chart(fig2, use_container_width=True)
 
         if df_prog.empty and df_certs.empty:
             alert("Analytics will appear as students use the platform.", "info")
