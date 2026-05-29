@@ -82,7 +82,7 @@ def show_quiz(user):
             alert("Leaderboard is empty. Be the first!", "info")
             return
         st.markdown("#### 🏆 Global Leaderboard")
-        medals = ["🥇","🥈","🥉"] + ["🎖️"]*i
+        medals = ["🥇","🥈","🥉"] + ["🎖️"]*100
         for i, r in enumerate(rows):
             avg_pct = round(r.get("avg_pct", 0))
             st.markdown(f"""
